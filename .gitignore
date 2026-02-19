@@ -1,0 +1,23 @@
+# --- python ---
+.venv/
+__pycache__/
+*.egg-info/
+*.pyc
+
+# --- general ---
+**/~$*
+*.code-workspace
+*.zip
+*.pth
+*.pkl
+*.slurm
+
+**/*tmp*
+**/*bak*
+**/*dev*
+
+# --- specifics ---
+.vscode/
+
+# --- forced includes ---
+# !
