@@ -129,7 +129,7 @@ class aeSimilarity:
             Cs = self.C[rs.choice(len(self.C), size=n, replace=False)]
 
             if self.metric == "euclidean":
-                D2 = self.similarity(Cs, Es)
+                D2 = -self.similarity(Cs, Es)  # negate to get positive squared distances
             else:
                 D2 = 2.0 - (2.0 * self.similarity(Cs, Es))
 
