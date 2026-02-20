@@ -138,7 +138,7 @@ def plotMultiLevelOverlap(d_selected):
         "50%+ Overlap": (0.50, "D", 15),
     }
     l_thresholds = {}
-    for label, (t, m, ms) in thresholds.items():
+    for label, (t, *mms) in thresholds.items():
         min_count = int(np.ceil(t * n_sets))
         l_thresholds[label] = {id for id, count in counter.items() if count >= min_count}
 

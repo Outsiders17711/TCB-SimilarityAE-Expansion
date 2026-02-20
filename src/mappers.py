@@ -149,7 +149,7 @@ def mapMultiLevelOverlap(d_selected: dict) -> folium.Map:
         unique = s_selected - s_overlap
         if unique:
             gc = data[data["id"].isin(unique)]
-            gc.explore(m=m, **getStyling(cmap[j], name=f"{label} ({len(gc)})"))
+            gc.explore(m=m, **getStyling(cmap[j], name=f"{label} ({len(gc)})"), show=False)
         else:
             logInfo(f"empty unique set for <{label}>")
 
