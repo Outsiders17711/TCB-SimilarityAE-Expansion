@@ -64,15 +64,22 @@ def plotMultiSelection(d_selected):
     s_overlap = set()
     if len(d_selected) > 1:
         s_overlap = set.intersection(*d_selected.values())
-        gc = data[data["id"].isin(s_overlap)].geometry.centroid
-        gc.plot(ax=ax, color=cmap[1], label=f"Overlap ({len(gc)})", marker="s", markersize=24)
+        if not s_overlap:  # print info and add empty legend entry
+            print(f"INFO: empty overlapping set for <{'/'.join(d_selected.keys())}>")
+            ax.scatter([], [], color=cmap[1], label="Overlap (0)", marker="s", s=24)
+        else:
+            gc = data[data["id"].isin(s_overlap)].geometry.centroid
+            gc.plot(ax=ax, color=cmap[1], label=f"Overlap ({len(gc)})", marker="s", markersize=24)
 
     # plot individual selections
     for i, (label, s_selected) in enumerate(d_selected.items(), start=2):
         ids = s_selected - s_overlap
-        assert ids, f"empty non-overlapping set for {label}"
-        gc = data[data["id"].isin(ids)].geometry.centroid
-        gc.plot(ax=ax, color=cmap[i], label=label, marker="s", markersize=11)
+        if not ids:  # print info and add empty legend entry
+            print(f"INFO: empty non-overlapping set for <{label}>")
+            ax.scatter([], [], color=cmap[i], label=f"{label} (0)", marker="s", s=11)
+        else:
+            gc = data[data["id"].isin(ids)].geometry.centroid
+            gc.plot(ax=ax, color=cmap[i], label=label, marker="s", markersize=11)
 
     plt.legend(fontsize=10, loc="lower right", bbox_to_anchor=(0.98, 0.17))
     plt.tight_layout(pad=0)
@@ -115,6 +122,9 @@ def plotMultiLevelOverlap(d_selected):
             gc = data[data["id"].isin(level)].geometry.centroid
             gc.plot(ax=ax, color=cmap[i], label=f"{label} ({len(gc)})", marker=marker, markersize=size)
             plotted.update(level)
+        else:  # print info and add empty legend entry
+            print(f"INFO: empty set for <{label}> threshold")
+            ax.scatter([], [], color=cmap[i], label=f"{label} (0)", marker=marker, s=size)
 
     # plot unique selections
     s_overlap = set.union(*l_thresholds.values()) if l_thresholds else set()
@@ -123,6 +133,9 @@ def plotMultiLevelOverlap(d_selected):
         if unique:
             gc = data[data["id"].isin(unique)].geometry.centroid
             gc.plot(ax=ax, color=cmap[j], label=f"{label} ({len(gc)})", marker="s", markersize=9)
+        else:  # print info and add empty legend entry
+            print(f"INFO: empty unique set for <{label}>")
+            ax.scatter([], [], color=cmap[j], label=f"{label} (0)", marker="s", s=9)
 
     plt.legend(fontsize=10, loc="lower right", bbox_to_anchor=(0.98, 0.17))
     plt.tight_layout(pad=0)
