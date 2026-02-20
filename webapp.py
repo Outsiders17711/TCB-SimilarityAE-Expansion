@@ -405,18 +405,13 @@ def runConsensusSelection(datasets):
     )
 
     col1, col2 = st.sidebar.columns(2)
-    kwargs = {"min_value": 250, "max_value": 1000, "value": 250, "step": 50}
-    r_buffer = col1.number_input(
-        label="**Buffer Radius (m)**",
-        help="Minimum spatial separation between candidate and existing stations",
-        **kwargs,  # type:ignore
-    )
-    d_epsilon = col2.number_input(
+    kwargs = {"min_value": 100, "max_value": 1000, "value": 250, "step": 50}
+    d_epsilon = col1.number_input(
         "**DBSCAN Epsilon (m)**",
         help="Maximum distance for points to be considered in the same cluster",
         **kwargs,  # type:ignore
     )
-    sz_cluster = st.sidebar.number_input("**Minimum Cluster Size**", min_value=1, max_value=10, value=1)
+    sz_cluster = col2.number_input("**Minimum Cluster Size**", min_value=1, max_value=10, value=1)
     use_medoid = st.sidebar.checkbox("**Use Medoid for Selection**", value=True)
 
     clicked = st.sidebar.button("Run Consensus Analysis", type="primary", width="stretch")
@@ -447,7 +442,7 @@ def runConsensusSelection(datasets):
                     gdf,
                     n=n,
                     s_methods=methods,
-                    r_buffer=r_buffer,
+                    r_buffer=d_epsilon,  # tie buffer radius to clustering epsilon for robustness
                     d_epsilon=d_epsilon,
                     min_candidates=sz_cluster,
                     use_medoid=use_medoid,
