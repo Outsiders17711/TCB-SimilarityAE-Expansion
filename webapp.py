@@ -1,4 +1,5 @@
 from src.basics import *
+from src.mappers import *
 from src.modules import *
 from src.plotters import *
 
@@ -82,6 +83,23 @@ def stPageConfig():
     )
 
 
+def DisplayStyle(static=False):
+    global dispMultiSelection, dispMultiLevelOverlap, dispConsensusExtensions
+
+    if static:
+        dispMultiSelection = plotMultiSelection
+        dispMultiLevelOverlap = plotMultiLevelOverlap
+        dispConsensusExtensions = plotConsensusExtensions
+    else:
+        dispMultiSelection = mapMultiSelection
+        dispMultiLevelOverlap = mapMultiLevelOverlap
+        dispConsensusExtensions = mapConsensusExtensions
+
+
+# initialise to defaults so disp* names are always defined at import time
+DisplayStyle(static=False)
+
+
 def landing():
     """Display landing page with app description and parameter information"""
     st.title("🚲 TSAE Similarity-Based BSS Expansion Dashboard")
@@ -147,6 +165,13 @@ def main():
         label_visibility="collapsed",
     )
 
+    ds = st.sidebar.radio("**Display Style**", ["Interactive Map", "Static Plot"], horizontal=True)
+    if ds != st.session_state.get("display"):
+        st.session_state.display = ds
+        st.session_state.results = {}
+        st.rerun()
+    DisplayStyle(static=(ds == "Static Plot"))
+
     st.sidebar.markdown("---")
     if reload:
         st.session_state.results = {}
@@ -208,7 +233,13 @@ def showResults(page, params, p_excludes=[]):
     """helper to display results with consistent formatting"""
     result = st.session_state.results[page]
     st.markdown(f"**Parameters:** {lfText(params, [page, *p_excludes])}")
-    st.pyplot(fig=result["fig"])
+
+    fig = result["fig"]
+    if isinstance(fig, folium.Map):
+        html = fig.get_root().render()  # render full HTML; preserves injected CSS
+        st.components.v1.html(html, height=700, scrolling=False)  # type:ignore
+    else:  # matplotlib figure
+        st.pyplot(fig=fig)
 
     if "stats" in result:
         cols = len(result["stats"])
@@ -237,7 +268,7 @@ def runSingleConfig(datasets):
             s_selected = getSA(ds, features, params)
             d_selected = {feature: s_selected}
 
-            fig = plotMultiSelection(d_selected)
+            fig = dispMultiSelection(d_selected)
             st.session_state.results[page] = {"selected": s_selected, "fig": fig}
 
     showResults(page, params)
@@ -259,7 +290,7 @@ def runFeatureComparison(datasets):
             overlap = set(saAE) & set(saRaw)
             pct = len(overlap) / n * 100
 
-            fig = plotMultiSelection(d_selected)
+            fig = dispMultiSelection(d_selected)
             st.session_state.results[page] = {
                 "fig": fig,
                 "overlap": overlap,
@@ -286,7 +317,7 @@ def runMethodComparison(datasets):
             overlap = set(d_selected["TOPK"]) & set(d_selected["KDE"])
             pct = len(overlap) / n * 100
 
-            fig = plotMultiSelection(d_selected)
+            fig = dispMultiSelection(d_selected)
             st.session_state.results[page] = {
                 "fig": fig,
                 "overlap": overlap,
@@ -313,7 +344,7 @@ def runMetricComparison(datasets):
             overlap = set(d_selected["Cosine"]) & set(d_selected["Euclidean"])
             pct = len(overlap) / n * 100
 
-            fig = plotMultiSelection(d_selected)
+            fig = dispMultiSelection(d_selected)
             st.session_state.results[page] = {
                 "fig": fig,
                 "overlap": overlap,
@@ -341,7 +372,7 @@ def runTopKSensitivity(datasets):
             overlap = set.intersection(*l_selections)
             selected = set.union(*l_selections)
 
-            fig = plotMultiLevelOverlap(d_selected)
+            fig = dispMultiLevelOverlap(d_selected)
             st.session_state.results[page] = {
                 "fig": fig,
                 "overlap": overlap,
@@ -441,7 +472,7 @@ def runConsensusSelection(datasets):
                     }
                 )
 
-            fig = plotConsensusExtensions(ASE.idxSelected, ASE.selectedClusters, n=n)
+            fig = dispConsensusExtensions(ASE.idxSelected, ASE.selectedClusters, n=n)
             st.session_state.results[page] = {
                 "fig": fig,
                 "filteredClusters": filteredClusters,

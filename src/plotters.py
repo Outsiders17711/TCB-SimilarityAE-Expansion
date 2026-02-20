@@ -107,7 +107,8 @@ def plotMultiSelection(d_selected):
             gc.plot(ax=ax, color=cmap[1], label=f"Overlap ({len(gc)})", marker="s", markersize=24)
 
     # plot individual selections
-    for i, (label, s_selected) in enumerate(d_selected.items(), start=2):
+    start = 2 if s_overlap else 1
+    for i, (label, s_selected) in enumerate(d_selected.items(), start=start):
         ids = s_selected - s_overlap
         if not ids:  # print info and add empty legend entry
             logInfo(f"empty non-overlapping set for <{label}>")
