@@ -7,12 +7,14 @@ requires-python = ">=3.11"
 dependencies = [
     "folium>=0.20.0",
     "geopandas>=1.1.1",
+    "mapclassify>=2.10.0",
     "matplotlib>=3.9.0",
     "numpy>=2.1.0",
     "pandas>=2.2.0",
     "scikit-learn>=1.5.0",
     "scipy>=1.13.0",
     "streamlit>=1.54.0",
+    "streamlit-folium>=0.26.1",
 ]
 
 [dependency-groups]
