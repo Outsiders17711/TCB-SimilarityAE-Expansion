@@ -5,7 +5,7 @@ from src.plotters import *
 
 # ------------------ globals ------------------ #
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.WARNING,  # set to INFO or DEBUG for more verbose output
     format="[%(asctime)s] %(levelname)s: %(message)s",
     datefmt="%d.%m.%y %H:%M:%S",
 )
@@ -416,7 +416,7 @@ def runConsensusSelection(datasets):
         help="Maximum distance for points to be considered in the same cluster",
         **kwargs,  # type:ignore
     )
-    sz_cluster = st.sidebar.number_input("**Minimum Cluster Size**", min_value=1, max_value=10, value=2)
+    sz_cluster = st.sidebar.number_input("**Minimum Cluster Size**", min_value=1, max_value=10, value=1)
     use_medoid = st.sidebar.checkbox("**Use Medoid for Selection**", value=True)
 
     clicked = st.sidebar.button("Run Consensus Analysis", type="primary", width="stretch")

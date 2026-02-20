@@ -177,19 +177,28 @@ def plotConsensusExtensions(idxSelected, selectedClusters, *, n):
 
     # plot selected representatives
     selected = data.loc[idxSelected].geometry.centroid
-    selected.plot(ax=ax, color=cmap[1], marker="s", markersize=21, label="Cluster Medoids", zorder=3)
+    selected.plot(
+        ax=ax,
+        color=cmap[1],
+        marker="s",
+        markersize=21,
+        label=f"Cluster Medoids ({len(selected)})",
+        zorder=3,
+    )
 
     # plot all candidates by cluster
+    n_candidates = 0
     for c in selectedClusters[:n]:
         cluster = data.loc[c["idxs_cluster"]]
         cluster.plot(ax=ax, color="green", alpha=0.65, linewidth=0.25)
+        n_candidates += len(cluster)
 
         # plot cluster boundaries with some buffering
         c_hull = gpd.GeoSeries(cluster.union_all(method="unary").convex_hull.buffer(35))
         c_hull.boundary.plot(ax=ax, color="black", alpha=1.0, linewidth=0.5, zorder=4)
 
     # dummy plots for legend
-    plt.scatter([], [], color="green", label=f"Cluster Candidates", s=9, marker="s")
+    plt.scatter([], [], color="green", label=f"Cluster Candidates ({n_candidates})", s=9, marker="s")
     plt.plot([], [], color="black", linewidth=0.5, label="Cluster Boundaries")
 
     plt.legend(fontsize=10, loc="lower right", bbox_to_anchor=(0.98, 0.17))
