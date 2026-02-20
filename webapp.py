@@ -2,7 +2,11 @@ from src.basics import *
 from src.modules import *
 
 # ------------------ globals ------------------ #
-logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s] %(levelname)s: %(message)s",
+    datefmt="%d.%m.%y %H:%M:%S",
+)
 
 tab10, dark2 = plt.get_cmap("tab10"), plt.get_cmap("Dark2")
 cmap = list(tab10.colors) + list(dark2.colors)[::-1]  # type:ignore
