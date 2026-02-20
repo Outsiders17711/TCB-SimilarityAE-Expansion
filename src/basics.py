@@ -10,3 +10,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import streamlit as st
+
+logInfo = logging.info
+logDebug = logging.debug
+logWarning = logging.warning
+logError = logging.error

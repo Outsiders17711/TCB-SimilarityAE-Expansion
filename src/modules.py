@@ -21,20 +21,30 @@ __all__ = [
 
 @contextmanager
 def pipeCellOutput(file: str | None = None, mode="w"):
-    """redirect output to a file, or discard if file is None"""
+    """redirect stdout and root logger to a file, or discard if file is None"""
     pipe = file if file else os.devnull
     if file:
         Path(file).parent.mkdir(parents=True, exist_ok=True)
 
+    root = logging.getLogger()
     bak_stdout = sys.stdout
+    bak_handlers = root.handlers[:]
+
     with open(pipe, mode) as f:
         sys.stdout = f
+        for h in bak_handlers:
+            root.removeHandler(h)
+        log_handler = logging.StreamHandler(f)
+        root.addHandler(log_handler)
         try:
             yield
         finally:
             sys.stdout = bak_stdout
+            root.removeHandler(log_handler)
+            for h in bak_handlers:
+                root.addHandler(h)
 
-    print(f"cell output piped to ./{file}") if file else None
+    logInfo(f"cell output piped to ./{file}") if file else None
 
 
 def setDisplayOptions(font=False):
@@ -112,7 +122,7 @@ class aeSimilarity:
     def topk(self, k: int = 3) -> np.ndarray:
         """weight is mean of top-k similarities to existing stations"""
         if k == 1:
-            print("aeSimilarity.topk(): k=1, using nearest neighbour similarity")
+            logDebug("aeSimilarity.topk(): k=1, using nearest neighbour similarity")
             return self.nearest()
 
         k = int(max(1, min(k, self.S.shape[1])))
@@ -134,7 +144,7 @@ class aeSimilarity:
                 D2 = 2.0 - (2.0 * self.similarity(Cs, Es))
 
             sigma = np.sqrt(max(np.median(D2), 1e-9))
-            print(f"aeSimilarity.kde(): estimated {sigma=:.4f} using median heuristic")
+            logDebug(f"aeSimilarity.kde(): estimated {sigma=:.4f} using median heuristic")
 
         gamma = 1.0 / (2.0 * sigma * sigma)  # type:ignore
         D2 = -self.S if self.metric == "euclidean" else 2.0 - 2.0 * self.S
@@ -210,21 +220,21 @@ class aeStationAllocation:
         self.idxExisting = existing = self.gdf.index[self.gdf["isBikeStation"] == True].values
         if self.nopriors:
             candidates = self.gdf.index.values
-            print(f"buildConflictGraph: nopriors mode - ignoring {len(existing)} existing stations")
-            print(f"buildConflictGraph: working with {len(candidates)=} candidates (all grids)")
+            logInfo(f"buildConflictGraph: nopriors mode - ignoring {len(existing)} existing stations")
+            logInfo(f"buildConflictGraph: working with {len(candidates)=} candidates (all grids)")
 
         else:
             candidates = self.gdf.index[self.gdf["isBikeStation"] == False].values
             if len(existing) == 0:
                 raise ValueError("no existing stations found in gdf")
-            print(f"buildConflictGraph: working with {len(existing)=} and {len(candidates)=} stations")
+            logInfo(f"buildConflictGraph: working with {len(existing)=} and {len(candidates)=} stations")
 
             # filter candidates too close to existing stations
             bt_existing = BallTree(centroids[existing], leaf_size=leaf, metric="euclidean")
             eqr = bt_existing.query_radius(centroids[candidates], r=buffer, return_distance=False)
             mask = np.array([len(ix) == 0 for ix in eqr])
             candidates = candidates[mask]  # candidates far enough from existing stations
-            print(f"buildConflictGraph: {len(candidates)=} candidates remain after filtering")
+            logInfo(f"buildConflictGraph: {len(candidates)=} candidates remain after filtering")
 
         # build conflict graph among remaining candidates
         if len(candidates) == 0:
@@ -269,7 +279,7 @@ class aeStationAllocation:
 
         assert selected, "greedySelection: no candidates selected, check inputs!"
         if len(selected) < self.n:
-            print(f"greedySelection: only selected {len(selected)}/{self.n} requested candidates")
+            logWarning(f"greedySelection: only selected {len(selected)}/{self.n} requested candidates")
         return selected
 
     def swapLocalSearch(self, selected: List[int], max_iters: int = 10) -> List[int]:
@@ -329,7 +339,7 @@ class aeStationAllocation:
                     pool.discard(bfc)
                     improved = True
 
-                    print(f"swapLocalSearch: swapped {sc} ({wsc:.4f}) with {bfc} ({wbfc:.4f})")
+                    logDebug(f"swapLocalSearch: swapped {sc} ({wsc:.4f}) with {bfc} ({wbfc:.4f})")
                     break  # break from inner loop and restart with the new selection
 
             if not improved:
@@ -351,7 +361,7 @@ class aeStationAllocation:
             q_distances, q_indices = t_reference.query(g_selected, k=1)
             for i, dist in enumerate(q_distances):
                 if dist[0] < self.r_buffer:
-                    print(f"station {i} is too close to existing stations ({dist[0]:.2f})")
+                    logWarning(f"station {i} is too close to existing stations ({dist[0]:.2f})")
                     isValid = False
 
         # check distance between selected stations
@@ -364,10 +374,10 @@ class aeStationAllocation:
         for i, (dist, idx) in enumerate(zip(q_distances[:, 1], q_indices[:, 1])):
             if (dist < self.r_buffer) and ([idx, i] not in skip):
                 skip.append([i, idx])
-                print(f"stations {i} and {idx} are too close to each other ({dist:.2f})")
+                logWarning(f"stations {i} and {idx} are too close to each other ({dist:.2f})")
                 isValid = False
 
-        print(f"validateSelection: validation check completed, {isValid=}")
+        logInfo(f"validateSelection: validation check completed, {isValid=}")
         return isValid
 
 
@@ -411,7 +421,7 @@ class extendExistingStations:
         existing = self.gdf.index[self.gdf["isBikeStation"] == True].values
         pool = self.gdf[self.gdf["isSelectedGrid"] == True]
         candidates = pool.index.values
-        print(f"buildConflictGraph: found {len(existing)=} stations and {len(candidates)=} candidates")
+        logInfo(f"buildConflictGraph: found {len(existing)=} stations and {len(candidates)=} candidates")
 
         # map candidate grids to methods that selected them
         rankings = [f"$rank{m}" for m in self.methods]
@@ -426,7 +436,7 @@ class extendExistingStations:
         distances, _ = bt_existing.query(self.gridCentroids[candidates], k=1)
         mask = distances.flatten() >= self.r_buffer
         candidates = candidates[mask]  # candidates far enough from existing stations
-        print(f"buildConflictGraph: {len(candidates)=} candidates remain after buffer filtering")
+        logInfo(f"buildConflictGraph: {len(candidates)=} candidates remain after buffer filtering")
 
         # indices of existing stations (gdf space)
         self.idxExisting: np.ndarray = existing
@@ -442,7 +452,7 @@ class extendExistingStations:
 
         n_noise = list(clabels).count(-1)
         n_clusters = len(set(clabels)) - (1 if n_noise else 0)
-        print(f"runClustering: DBSCAN found {n_clusters} clusters with {n_noise} noise points")
+        logInfo(f"runClustering: DBSCAN found {n_clusters} clusters with {n_noise} noise points")
 
         # rank clusters by method diversity and size
         deets = []
@@ -517,7 +527,7 @@ class extendExistingStations:
         # select top-n clusters
         topn = self.rankedClusters[: self.n]
         if len(topn) < self.n:
-            print(f"getExtensions: only {len(topn)} clusters available, requested {self.n}")
+            logWarning(f"getExtensions: only {len(topn)} clusters available, requested {self.n}")
 
         # select representative grid from each cluster
         self.idxSelected = []
@@ -534,7 +544,7 @@ class extendExistingStations:
 
         self.idxSelected = np.array(self.idxSelected)
         assert self.validateSelection(), "!!!"
-        print(f"getExtensions: selected {len(self.idxSelected)} extension stations")
+        logInfo(f"getExtensions: selected {len(self.idxSelected)} extension stations")
         return self.gdf.loc[self.idxSelected, "id"].tolist()
 
     def validateSelection(self) -> bool:
@@ -550,7 +560,7 @@ class extendExistingStations:
         q_distances, q_indices = t_reference.query(g_selected, k=1)
         for i, dist in enumerate(q_distances):
             if dist[0] < self.r_buffer:
-                print(f"station {i} is too close to existing stations ({dist[0]:.2f}m)")
+                logWarning(f"station {i} is too close to existing stations ({dist[0]:.2f}m)")
                 isValid = False
 
         # check distance between selected stations
@@ -562,10 +572,10 @@ class extendExistingStations:
             for i, (dist, idx) in enumerate(zip(q_distances[:, 1], q_indices[:, 1])):
                 if (dist < self.r_buffer) and ([idx, i] not in skip):
                     skip.append([i, idx])
-                    print(f"stations {i} and {idx} are too close to each other ({dist:.2f}m)")
+                    logWarning(f"stations {i} and {idx} are too close to each other ({dist:.2f}m)")
                     isValid = False
 
-        print(f"validateSelection: validation check completed, {isValid=}")
+        logInfo(f"validateSelection: validation check completed, {isValid=}")
         return isValid
 
     def plotExtensions(self, fpath: str | None = None) -> None:
@@ -631,6 +641,6 @@ class aeSimilarityExpansion(extendExistingStations):
 
         if save:
             plt.savefig(save, bbox_inches="tight")
-            print(f"plotExtensions: figure saved to ./{save}")
+            logInfo(f"plotExtensions: figure saved to ./{save}")
             plt.close()
         return fig  # return figure for webapp display
