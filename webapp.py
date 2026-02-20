@@ -2,6 +2,8 @@ from src.basics import *
 from src.modules import *
 
 # ------------------ globals ------------------ #
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+
 tab10, dark2 = plt.get_cmap("tab10"), plt.get_cmap("Dark2")
 cmap = list(tab10.colors) + list(dark2.colors)[::-1]  # type:ignore
 
@@ -65,7 +67,7 @@ def plotMultiSelection(d_selected):
     if len(d_selected) > 1:
         s_overlap = set.intersection(*d_selected.values())
         if not s_overlap:  # print info and add empty legend entry
-            print(f"INFO: empty overlapping set for <{'/'.join(d_selected.keys())}>")
+            logging.info(f"empty overlapping set for <{'/'.join(d_selected.keys())}>")
             ax.scatter([], [], color=cmap[1], label="Overlap (0)", marker="s", s=24)
         else:
             gc = data[data["id"].isin(s_overlap)].geometry.centroid
@@ -75,7 +77,7 @@ def plotMultiSelection(d_selected):
     for i, (label, s_selected) in enumerate(d_selected.items(), start=2):
         ids = s_selected - s_overlap
         if not ids:  # print info and add empty legend entry
-            print(f"INFO: empty non-overlapping set for <{label}>")
+            logging.info(f"empty non-overlapping set for <{label}>")
             ax.scatter([], [], color=cmap[i], label=f"{label} (0)", marker="s", s=11)
         else:
             gc = data[data["id"].isin(ids)].geometry.centroid
@@ -123,7 +125,7 @@ def plotMultiLevelOverlap(d_selected):
             gc.plot(ax=ax, color=cmap[i], label=f"{label} ({len(gc)})", marker=marker, markersize=size)
             plotted.update(level)
         else:  # print info and add empty legend entry
-            print(f"INFO: empty set for <{label}> threshold")
+            logging.info(f"empty set for <{label}> threshold")
             ax.scatter([], [], color=cmap[i], label=f"{label} (0)", marker=marker, s=size)
 
     # plot unique selections
@@ -134,7 +136,7 @@ def plotMultiLevelOverlap(d_selected):
             gc = data[data["id"].isin(unique)].geometry.centroid
             gc.plot(ax=ax, color=cmap[j], label=f"{label} ({len(gc)})", marker="s", markersize=9)
         else:  # print info and add empty legend entry
-            print(f"INFO: empty unique set for <{label}>")
+            logging.info(f"empty unique set for <{label}>")
             ax.scatter([], [], color=cmap[j], label=f"{label} (0)", marker="s", s=9)
 
     plt.legend(fontsize=10, loc="lower right", bbox_to_anchor=(0.98, 0.17))
