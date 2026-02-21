@@ -54,6 +54,7 @@ def initBaseMap(data: gpd.GeoDataFrame) -> folium.Map:
         zoom_control=False,
         control_scale=True,
     )
+    alt = folium.TileLayer("cartodbdark_matter", name="CartoDB Dark Matter", control=True).add_to(m)
     ll = folium.TileLayer("cartodbpositron", name="CartoDB Positron", control=True).add_to(m)
     lr = folium.TileLayer("openstreetmap", name="OpenStreetMap", control=True).add_to(m)
     # fp.SideBySideLayers(ll, lr).add_to(m)
