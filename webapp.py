@@ -107,28 +107,32 @@ def landing():
     This dashboard enables interactive comparison of bike station allocation strategies 
     across different parametrisations using autoencoder-based spatial modelling.
     """)
-    st.markdown("---")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("#### 📊 Analysis Modes")
-        st.markdown("""
-        - **Single Configuration**: Test individual parameter combinations
-        - **Compare Features**: AE encodings vs raw spatial features
-        - **Compare Methods**: TopK vs KDE allocation methods
-        - **Compare Metrics**: Cosine vs Euclidean distance
-        - **TopK Sensitivity**: Analyse robustness across K values
-        - **Consensus Selection**: Spatial clustering for robust placement
-        """)
-    with col2:
-        st.markdown("#### ⚙️ Key Parameters")
-        st.markdown("""
-        - **Features**: AE encodings (learned representations) or raw spatial features
-        - **Metric**: Distance measure (cosine for l2-normalised, euclidean otherwise)
-        - **Method**: TopK (nearest neighbors) or KDE (kernel density)
-        - **TopK**: Number of nearest existing stations to consider
-        - **nStations**: Target number of new stations to allocate
-        """)
+    t_guide, t_framework = st.tabs(["**User Guide**", "**Framework Details**"])
+    with t_guide:
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("#### 📊 Analysis Modes")
+            st.markdown("""
+            - **Single Configuration**: Test individual parameter combinations
+            - **Compare Features**: HDAE encodings vs raw spatial features
+            - **Compare Methods**: TopK vs KDE allocation methods
+            - **Compare Metrics**: Cosine vs Euclidean distance
+            - **TopK Sensitivity**: Analyse robustness across K values
+            - **Consensus Selection**: Spatial clustering for robust placement
+            """)
+        with col2:
+            st.markdown("#### ⚙️ Key Parameters")
+            st.markdown("""
+            - **Features**: HDAE encodings (learned representations) or raw spatial features
+            - **Metric**: Distance measure (cosine for l2-normalised, euclidean otherwise)
+            - **Method**: TopK (nearest neighbors) or KDE (kernel density)
+            - **TopK**: Number of nearest existing stations to consider
+            - **nStations**: Target number of new stations to allocate
+            """)
+
+    with t_framework:
+        st.markdown(st.session_state.discussions["framework"])
 
     st.markdown("---")
     st.info("👈 Select an analysis mode from the sidebar to begin")
@@ -140,6 +144,8 @@ def main():
     # initialise session state for caching results
     if "results" not in st.session_state:
         st.session_state.results = {}
+        st.session_state.helps = yamlLoader("src/schema.help.yaml")
+        st.session_state.discussions = yamlLoader("src/schema.discussion.yaml")
 
     # load data
     with st.spinner("Loading data and models..."):
@@ -198,24 +204,41 @@ def selectParams(page: str):
     suffix = suffixes.get(page, "Comparison")
     st.header(f"{page.title()} {suffix}", divider="gray")
 
+    lfh = lambda key: st.session_state.helps.get(key, None)
     st.sidebar.markdown("### Configuration")
-    n = st.sidebar.number_input("**Number of Stations (n)**", 12, max_value=204, value=nExisting)
+    n = st.sidebar.number_input(
+        "**Number of Stations (n)**",
+        12,
+        max_value=204,
+        value=nExisting,
+        help=lfh("n"),
+    )
 
     feature = "AE Encodings"  # default
     if page not in ["feature", "metric"]:
-        feature = st.sidebar.radio("**Features**", ["AE Encodings", "Raw Features"], horizontal=True)
+        feature = st.sidebar.radio(
+            "**Features**",
+            ["AE Encodings", "Raw Features"],
+            horizontal=True,
+            help=lfh("feature"),
+        )
 
     metric = "cosine"  # default
     if page != "metric":
-        metric = st.sidebar.radio("**Metric**", ["cosine", "euclidean"], horizontal=True)
+        metric = st.sidebar.radio(
+            "**Metric**",
+            ["cosine", "euclidean"],
+            horizontal=True,
+            help=lfh("metric"),
+        )
 
     method = "topk"  # default
     if page not in ["method", "topk", "consensus"]:
-        method = st.sidebar.radio("**Method**", ["topk", "kde"], horizontal=True)
+        method = st.sidebar.radio("**Method**", ["topk", "kde"], horizontal=True, help=lfh("method"))
 
     topk = None  # default
     if (page not in ["topk", "consensus"]) and (method == "topk"):
-        topk = st.sidebar.slider("Top K", min_value=1, max_value=nExisting, value=3)
+        topk = st.sidebar.slider("Top K", min_value=1, max_value=nExisting, value=3, help=lfh("topk"))
     elif page in ["topk", "consensus"]:
         topk = chooseK()
         # st.sidebar.write(f"K values: {topk}")  # already displayed in main area
@@ -232,28 +255,37 @@ def selectParams(page: str):
 def showResults(page, params, p_excludes=[]):
     """helper to display results with consistent formatting"""
     result = st.session_state.results[page]
-    st.markdown(f"**Parameters:** {lfText(params, [page, *p_excludes])}")
+    t_results, t_discussion = st.tabs(["**Results**", "**Discussion**"])
 
-    fig = result["fig"]
-    if isinstance(fig, folium.Map):
-        html = fig.get_root().render()  # render full HTML; preserves injected CSS
-        st.components.v1.html(html, height=700, scrolling=False)  # type:ignore
-    else:  # matplotlib figure
-        st.pyplot(fig=fig)
+    with t_results:
+        if "k_values" in params:
+            st.markdown(f"**K Values:** {', '.join(map(str, params['k_values']))}")
+        st.markdown(f"**Parameters:** {lfText(params, [page, *p_excludes])}")
 
-    if "stats" in result:
-        cols = len(result["stats"])
-        for col, (stat, value) in zip(st.columns(cols), result["stats"].items()):
-            col.metric(stat, value)
+        fig = result["fig"]
+        if isinstance(fig, folium.Map):
+            html = fig.get_root().render()  # render full HTML; preserves injected CSS
+            st.components.v1.html(html, height=700, scrolling=False)  # type:ignore
+        else:  # matplotlib figure
+            st.pyplot(fig=fig)
 
-    mapping = {"single": "selected", "consensus": "consensus"}
-    tag = mapping.get(page, "overlap")
-    with st.expander(f"View {tag.title()} Grid IDs"):
-        if tag == "consensus":
-            df = pd.DataFrame(result["deetsConsensus"])
-            st.dataframe(df, width="stretch", hide_index=True)
-        else:
-            st.write(sorted(result[tag]))
+        if "stats" in result:
+            cols = len(result["stats"])
+            for col, (stat, value) in zip(st.columns(cols), result["stats"].items()):
+                col.metric(stat, value)
+
+        mapping = {"single": "selected", "consensus": "consensus"}
+        tag = mapping.get(page, "overlap")
+        with st.expander(f"View {tag.title()} Grid IDs"):
+            if tag == "consensus":
+                df = pd.DataFrame(result["deetsConsensus"])
+                st.dataframe(df, width="stretch", hide_index=True)
+            else:
+                st.write(sorted(result[tag]))
+
+    with t_discussion:
+        discussion = st.session_state.discussions.get(page, "No discussion available for this page.")
+        st.markdown(discussion)
 
 
 def runSingleConfig(datasets):
@@ -384,7 +416,7 @@ def runTopKSensitivity(datasets):
                 },
             }
 
-    st.markdown(f"**K Values:** {', '.join(map(str, k_values))}")
+    params["k_values"] = k_values
     showResults(page, params)
 
 
@@ -394,25 +426,30 @@ def runConsensusSelection(datasets):
     n, feature, method, metric, k_values = settings.values()
     params = {"n": n, "metric": metric, "method": method, "topk": None}
 
+    lfh = lambda key: st.session_state.helps.get(key, None)
     st.sidebar.markdown("### Spatial Clustering")
+    kwargs = {"min_value": 25, "max_value": 100, "value": 100, "step": 25}
     threshold = st.sidebar.slider(
         "**Consensus Threshold (%)**",
-        min_value=25,
-        max_value=100,
-        value=100,
-        step=25,
-        help="Minimum percentage of methods that must select a station",
+        help=lfh("threshold"),
+        **kwargs,  # type:ignore
     )
 
     col1, col2 = st.sidebar.columns(2)
     kwargs = {"min_value": 100, "max_value": 1000, "value": 250, "step": 50}
     d_epsilon = col1.number_input(
         "**DBSCAN Epsilon (m)**",
-        help="Maximum distance for points to be considered in the same cluster",
+        help=lfh("d_epsilon"),
         **kwargs,  # type:ignore
     )
-    sz_cluster = col2.number_input("**Minimum Cluster Size**", min_value=1, max_value=10, value=1)
-    use_medoid = st.sidebar.checkbox("**Use Medoid for Selection**", value=True)
+    sz_cluster = col2.number_input(
+        "**Minimum Cluster Size**",
+        min_value=1,
+        max_value=10,
+        value=1,
+        help=lfh("sz_cluster"),
+    )
+    use_medoid = st.sidebar.checkbox("**Use Medoid for Selection**", value=True, help=lfh("medoid"))
 
     clicked = st.sidebar.button("Run Consensus Analysis", type="primary", width="stretch")
     if clicked or not (cached):
@@ -480,7 +517,7 @@ def runConsensusSelection(datasets):
                 },
             }
 
-    st.markdown(f"**K Values:** {', '.join(map(str, k_values))}")
+    params["k_values"] = k_values
     showResults(page, params, p_excludes=["topk"])
 
 

@@ -1,6 +1,7 @@
 import heapq
 from contextlib import contextmanager
 
+import yaml
 from scipy.spatial.distance import cdist
 from shapely import wkt
 from sklearn.cluster import DBSCAN
@@ -16,6 +17,7 @@ __all__ = [
     "setDisplayOptions",
     "gdf2csv",
     "csv2gdf",
+    "yamlLoader",
 ]
 
 
@@ -83,6 +85,11 @@ def csv2gdf(fp, crs="EPSG:25833"):
     df = pd.read_csv(fp)
     df["geometry"] = df["geometry"].apply(wkt.loads)  # type:ignore
     return gpd.GeoDataFrame(df, geometry="geometry", crs=crs)
+
+
+def yamlLoader(fp):
+    with open(fp, "r") as f:
+        return yaml.safe_load(f)
 
 
 class aeSimilarity:

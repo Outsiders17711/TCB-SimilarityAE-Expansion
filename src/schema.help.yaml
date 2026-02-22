@@ -1,0 +1,29 @@
+n: |
+  Target number of new stations to allocate. Limited by twice the number of existing stations to avoid excessive expansion requests.
+
+feature: |
+  Feature representation for similarity computation. AE Encodings use learned latent representations from the hybrid denoising autoencoder; Raw Features use engineered spatial attributes directly.
+
+metric: |
+  Distance metric for measuring pairwise similarity between candidate and reference embeddings. Cosine measures directional alignment (requires l2 normalisation); Euclidean measures absolute distance in embedding space.
+
+method: |
+  Similarity aggregation method. Top-K computes mean of top-K similarities to existing stations; KDE performs kernel density estimation over all references.
+
+topk: |
+  Number of nearest existing stations to aggregate for Top-K method. k=1 uses single nearest station; higher k captures broader alignment with existing patterns.
+
+k_values: |
+  Span of K values to test for sensitivity analysis. Logarithmic spacing explores range efficiently; percentile-based spacing reflects distribution of existing stations.
+
+threshold: |
+  Minimum percentage of methods/configurations that must select a station for consensus. 100% requires unanimity across all parametrisations; lower thresholds are more permissive.
+
+d_epsilon: |
+  Maximum distance (metres) for spatial clustering of candidates. Candidate grids within this radius are grouped, enabling multi-method consensus via medoid or cluster centroid selection.
+
+sz_cluster: |
+  Minimum number of candidate grids required to form a valid cluster. Isolated selections or very small clusters are discarded below this threshold.
+
+medoid: |
+  Cluster representation strategy. True selects the medoid (most central member of cluster); False selects the centroid (average position). Medoid ensures selection is a valid grid cell.

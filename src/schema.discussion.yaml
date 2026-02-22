@@ -1,0 +1,132 @@
+framework: |
+  #### Motivation
+  Bike-sharing systems (BSS) have emerged as critical components of sustainable urban mobility, providing flexible options that complement public transit networks for first-mile/last-mile connectivity and short-distance trips. BSS operators face the challenge of strategically placing new stations to maximise accessibility and utilisation while maintaining operational efficiency. The location-allocation problem is particularly complex, as successful placement depends on intricate interactions between urban form, transport infrastructure, socio-demographic patterns, and user behaviour.
+
+  #### Approach
+  This framework leverages patterns from existing successful stations to inform expansion decisions — a similarity-based approach that assumes locations sharing key features with existing stations are likely to perform well. Urban environments are characterised by high-dimensional, heterogeneous data spanning socio-demographics, built environment, terrain, mobility patterns and transit accessibility. Directly computing similarity in this raw feature space presents challenges related to noise, redundancy, and the curse of dimensionality. A hybrid denoising autoencoder (HDAE) addresses these concerns by compressing high-dimensional urban features into a structured low-dimensional latent space where similarity-based candidate selection is tractable.
+
+  #### Key Results Summary
+  - HDAE embeddings produce substantially tighter, more heterogeneous spatial clusters than raw features (silhouette: 0.253 vs 0.135)
+  - Only 11.76% of allocation candidates overlap between raw features and HDAE embeddings, indicating learned representations capture qualitatively different patterns
+  - Allocation outcomes are robust across similarity methods and distance metrics once embeddings are used
+  - A consensus procedure across 7 Top-K parametrisations yields 32 high-confidence extension zones with unanimous agreement
+
+single: |
+  #### Study Area & Feature Engineering
+  Demonstrated on Trondheim, Norway (Trondheim Bysykkel), the study area is discretised into 19,474 grid cells of $100 \times 100$ metres. Of these, 68 contain existing BSS stations. The 29 engineered features span four thematic groups: socio-demographic (population, housing, jobs, income), built environment (building footprints, CBD proximity, terrain slope/elevation), transport network (cycling infrastructure, road connectivity, mobility flows, transit accessibility), and neighbourhood flow features (Moore neighbourhood aggregation of cycling, people, and transit flows).
+
+  #### HDAE Architecture
+  The hybrid denoising autoencoder extends a base autoencoder with feature noise augmentation and a supervised classification head.
+
+  **Why Autoencoder?** The encoder compresses 29-dimensional inputs into a latent embedding, discarding noise and redundancy. The decoder reconstructs original features from the embedding, forcing the encoder to retain only the most informative patterns. Lower-dimensional embeddings reduce computational cost and improve similarity computation quality.
+
+  **Why Denoising?** During training, Gaussian noise is injected into a random subset of features with a given probability and clipped to realistic bounds. The model learns to reconstruct clean inputs, producing representations that remain stable under input perturbations. Grids with similar urban characteristics cluster together in the embedding space despite minor feature variations.
+
+  **Why Hybrid?** The classification head maps the latent embedding to binary station presence predictions. The classification loss drives separation between station grids and candidates while the reconstruction loss resists this for feature-similar candidates. The resulting tension places promising candidates near the decision boundary — and near existing station embeddings. The classification head is discarded after training; only encoder embeddings are used downstream.
+
+  #### Location Allocation Pipeline
+  **Conflict Graph**: Candidates within 250m buffer of existing stations are excluded. Among remaining candidates, edges connect pairs within the buffer distance. The resulting graph's independent sets represent spatially dispersed selections.
+
+  **Greedy MWIS + Local Search**: Candidates ranked by similarity weight in descending order. The highest-weight available candidate is selected and its conflict neighbours removed. Swap-based local search then explores exchanges with non-conflicting non-selected candidates, accepting swaps that increase total weight.
+
+  #### Framework Configurability
+  Both the reference set ($R$, existing stations) and candidate set ($C$) can be customised without retraining the autoencoder. For example, restricting $R$ to high-performing stations in a particular district, or limiting $C$ to a specific expansion corridor, enables targeted "what-if" analyses using the same learned embeddings. The framework imposes no value judgements on candidate grids other than their feature-space similarity to the reference set.
+
+  #### Limitations
+  The similarity-based approach is conservative — it cannot surface locations that would succeed precisely because they differ from the current network. This can be partially mitigated by curating a reference set representing a broader range of profiles, or by weighting reference grids by operational performance. The spatial conflict graph uses Euclidean buffer distances; network distance or land use feasibility constraints would produce more realistic spacing rules. The core assumption that feature-space similarity predicts operational success requires empirical validation through longitudinal deployment studies.
+
+feature: |
+  #### Feature Groups (29 Features)
+  - **Socio-Demographic**: population, housing units, jobs, average income from census-based grid data
+  - **Built Environment**: building footprints (retail, offices, schools), CBD proximity, terrain slope and elevation
+  - **Transport Network**: cycleway and bike lane presence, road connectivity (street segments, junctions, motor lanes), GPS and cellular mobility flows, transit stop counts, line diversity, stop proximity and passenger activity
+  - **Neighbourhood Flow**: Moore neighbourhood aggregation computing mean and maximum cycling, people, and transit flows across neighbouring grid cells
+
+  #### Clustering Quality
+  $k$-means clustering ($k=5$) applied to z-scored raw features vs HDAE embeddings reveals qualitatively distinct structures. Raw feature clusters largely form non-overlapping layers radiating inward from the study area boundary toward the city centre — the features mainly capture distance from the city centre rather than specific urban character. HDAE embeddings produce spatially heterogeneous clusters with pockets of one cluster appearing within another, reflecting finer distinctions in urban character. **Mean silhouette score: 0.135 (raw) → 0.253 (HDAE)**.
+
+  #### Allocation Comparison
+  Allocating $n=68$ stations with Top-K ($k=3$), cosine metric, 250m buffer: raw features produce scattered, noise-driven selections at the periphery influenced by isolated land-use signals. HDAE allocations identify candidates within well-developed urban areas sharing meaningful characteristics with reference grids. **Only 8 of 68 candidates (11.76%) selected by both methods**, confirming embeddings capture qualitatively different patterns.
+
+  #### Embedding Analysis
+  Pairwise correlations between the 8 embedding dimensions are low, indicating the autoencoder effectively distributes information across the latent space without redundancy. SHAP analysis identifies the highest-ranked features as **distance to nearest transit stop**, **distance to city centre**, and **number of bike lanes**. Importance distributes across embedding dimensions with no single feature dominating any particular dimension.
+
+method: |
+  #### Top-K vs KDE
+
+  **Top-$k$**:
+  $$w_i = \frac{1}{k} \sum_{j \in \text{top-}k} d(\mathbf{z}_{c,i}, \mathbf{z}_{r,j})$$
+
+  Focuses on the $k$ most similar reference grids. $k=1$ reduces to nearest-neighbour (maximum similarity). Higher $k$ captures broader alignment with the full reference set. Default $k=3$ balances local sensitivity with pattern matching breadth.
+
+  **KDE**:
+  $$w_i = \sum_{j \in R} \exp\left(-\frac{d(\mathbf{z}_{c,i}, \mathbf{z}_{r,j})^2}{2\sigma^2}\right)$$
+
+  Integrates contributions from all 68 reference grids. Bandwidth $\sigma$, estimated via median heuristic over subsampled pairs. KDE inherently captures a global similarity landscape through its kernel density estimation approach.
+
+  #### Allocation Outcomes
+  Using HDAE embeddings, $n=68$, 250m buffer: 
+
+
+  | Metric | Top-K ∩ KDE | Overlap % |
+  |--------|:-------------:|:-----------:|
+  | Cosine | 25 | 36.76% |
+  | Euclidean | 15 | 22.06% |
+
+  Top-K ($k=3$) produces a more spatially dispersed selection farther from existing stations, while KDE produces more conservative selections around existing station clusters and major transit corridors.
+
+  However, as $k$ increases in Top-K, selections converge toward the KDE outcome: at $k=68$ (global mean), **66 candidates (97.06%)** overlap with KDE under cosine and **67 (97.53%)** under Euclidean. This illustrates how Top-K transitions from local similarity peaks to a global consensus as $k$ increases, eventually matching KDE's global averaging behaviour.
+
+metric: |
+  #### Cosine vs Euclidean
+
+  **Cosine**:
+  $$d(\mathbf{z}_{c,i}, \mathbf{z}_{r,j}) = -\frac{\mathbf{z}_{c,i} \cdot \mathbf{z}_{r,j}}{\|\mathbf{z}_{c,i}\| \|\mathbf{z}_{r,j}\|}$$
+
+  Measures directional alignment; invariant to vector magnitude. Requires z-score and L2-normalisation of embeddings. The HDAE classification head uses L2-normalised embeddings during training, encoding class-discriminative signal in the angular geometry of the latent space. Cosine directly exploits this design.
+
+  **Euclidean**:
+  $$d(\mathbf{z}_{c,i}, \mathbf{z}_{r,j}) = -\|\mathbf{z}_{c,i} - \mathbf{z}_{r,j}\|_2^2$$
+
+  Measures absolute separation; sensitive to both direction and magnitude. Requires only z-score normalisation. The comparison is inherently asymmetric: Euclidean distance on z-scored embeddings mixes in magnitude information that carries no class-discriminative signal (which was encoded angularly by the classification head).
+
+  #### Allocation Outcomes
+  Using HDAE embeddings, Top-K method, $n=68$, 250m buffer:
+
+  | k | Cosine ∩ Euclidean | Overlap % |
+  |---|:------------------:|:---------:|
+  | 3 | 43 | 63.23% |
+  | 68 | 56 | 82.35% |
+
+  KDE at $k=68$ produces the same 56-candidate overlap (82.35%). The relationship is not strictly monotonic across intermediate $k$ values — overlap can decrease before rising again as the similarity landscape transitions from local to global consensus and marginal candidates shift non-linearly. There is a **robust core** of locations identified consistently across both metrics, with the choice of metric affecting only marginal selections.
+
+topk: |
+  #### Experimental Setup
+  Allocations repeated across seven logarithmically-spaced $k$ values from $k=1$ (nearest neighbour) to $k=68$ (global mean) using cosine metric, HDAE embeddings, $n=68$, 250m buffer: $k \in \{1, 3, 5, 9, 17, 34, 68\}$
+
+  #### Results
+  Across all seven runs, **154 unique candidates** are identified out of a possible $7 \times 68 = 476$, giving a **unique ratio of 2.26** (compared to 7.0 if all selections were completely disjoint). This high overlap reflects a stable core of locations consistently identified as similar to existing stations regardless of aggregation breadth.
+
+  | Consensus Level | Candidates | Share |
+  |-----------------|:------------:|:-------:|
+  | All 7 k values | 14 | 9.09% |
+  | ≥ 75% of k values | 13 | 8.44% |
+  | ≥ 50% of k values | 28 | 18.18% |
+
+  This stability is not uniform across the range. Adjacent large-$k$ values share more candidates than adjacent small-$k$ values. Mid-range values ($k \in \{5, 9, 17\}$) contribute disproportionately to the high-consensus set — the most reliable similarity aggregation lies in the mid-to-global range, where selections are neither driven by isolated local peaks nor overly smoothed by the global mean.
+
+consensus: |
+  #### Rationale
+  Sensitivity analyses demonstrate a stable core of candidates across methods, metrics, and $k$ parameters, alongside marginal candidates that shift based on configuration choices. The consensus procedure addresses the absence of a single objectively best parametrisation by pooling candidates across multiple configurations and retaining only those with consistent selection across the full range of choices — removing the need to identify a single best parametrisation.
+
+  #### Procedure
+  Applied to the seven Top-K selections ($k \in \{1,3,5,9,17,34,68\}$):
+  1. Pool unique candidates selected by any of the seven $k$ values: **154 unique candidate locations**
+  2. Annotate each candidate with which $k$ values selected it (*consensus diversity*)
+  3. Cluster candidates geographically via DBSCAN (250m radius, minimum cluster size = 1): **89 spatial clusters** (29 multi-candidate, 60 singletons)
+  4. Rank clusters by consensus diversity, using cluster size as tie-breaker
+  5. Apply unanimous threshold (all 7 $k$ values): **32 high-confidence extension zones**
+  6. Select the **medoid** grid within each zone (member minimising sum of within-cluster distances) as the representative location
+
+  #### Interpretation
+  The 32 medoid-selected zones represent sites where every parametrisation agrees, producing a spatially dispersed set of high-confidence recommendations independent of the choice of $k$. The clustering step groups nearby candidates into coherent, operationally deployable zones rather than isolated grid-level selections.
