@@ -9,6 +9,7 @@ logging.basicConfig(
     format="[%(asctime)s] %(levelname)s: %(message)s",
     datefmt="%d.%m.%y %H:%M:%S",
 )
+root = Path(__file__).resolve().parent  # root directory of the webapp
 
 lfText = lambda params, t=[]: " | ".join([f"{k}={v}" for k, v in params.items() if k not in t])
 nExisting = 68  # similarity is wrt to existing stations; some parameters are bounded by their count
@@ -144,8 +145,8 @@ def main():
     # initialise session state for caching results
     if "results" not in st.session_state:
         st.session_state.results = {}
-        st.session_state.helps = yamlLoader("src/schema.help.yaml")
-        st.session_state.discussions = yamlLoader("src/schema.discussion.yaml")
+        st.session_state.helps = yamlLoader(f"{root}/src/schema.help.yaml")
+        st.session_state.discussions = yamlLoader(f"{root}/src/schema.discussion.yaml")
 
     # load data
     with st.spinner("Loading data and models..."):
