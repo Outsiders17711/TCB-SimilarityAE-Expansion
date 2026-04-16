@@ -1,0 +1,32 @@
+# non-spatial features to ignore during modelling
+ignores:
+  - geometry
+  - centroid
+  - latitude
+  - longitude
+  - buffer
+  - id
+
+# target features for supervised learning
+targets:
+  - id # for mapping original indices to encoded features
+  - isBikeStation # for supervised classification head
+
+# subset of spatial features for distribution plotting
+FeatureDistributions:
+  - nHousing
+  - nJob
+  - popTotal
+  - avgIncome
+  - nStreet
+  - nMotorLane
+  - nBikeLane
+  - nBusStop
+  - distRetail
+  - distOffice
+  - distSchool
+  - Slope
+  - cyclingFlow
+  - peopleFlow
+  - transitFlow
+  - Elevation

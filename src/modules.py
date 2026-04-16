@@ -1,7 +1,9 @@
 import heapq
 from contextlib import contextmanager
 
+import matplotlib as mpl
 import yaml
+from matplotlib.colors import ListedColormap
 from scipy.spatial.distance import cdist
 from shapely import wkt
 from sklearn.cluster import DBSCAN
@@ -12,36 +14,57 @@ from .basics import *
 __all__ = [
     "aeSimilarityExpansion",
     "aeStationAllocation",
+    # ---
     "pipeCellOutput",
     "normaliseEncodings",
     "setDisplayOptions",
     "gdf2csv",
     "csv2gdf",
     "yamlLoader",
+    # ---
+    "sanityCheck",
+    "slicePalette",
+    "selfRNDR",
+    "printFeatureCardinality",
+    "peekNumerical",
 ]
 
 
+## -------------------------------------------------------------- ##
 @contextmanager
 def pipeCellOutput(file: str | None = None, mode="w"):
-    """redirect stdout and root logger to a file, or discard if file is None"""
+    """redirect stdout, stderr and root logger to a file, or discard if file is None"""
     pipe = file if file else os.devnull
     if file:
         Path(file).parent.mkdir(parents=True, exist_ok=True)
 
     root = logging.getLogger()
+    sys.modules["IPython.display"] = None  # type:ignore
     bak_stdout = sys.stdout
+    bak_stderr = sys.stderr
     bak_handlers = root.handlers[:]
 
     with open(pipe, mode) as f:
         sys.stdout = f
+        sys.stderr = f
+
         for h in bak_handlers:
             root.removeHandler(h)
         log_handler = logging.StreamHandler(f)
         root.addHandler(log_handler)
+
         try:
             yield
+
         finally:
             sys.stdout = bak_stdout
+            sys.stderr = bak_stderr
+
+            try:
+                del sys.modules["IPython.display"]
+            except KeyError:
+                pass
+
             root.removeHandler(log_handler)
             for h in bak_handlers:
                 root.addHandler(h)
@@ -92,6 +115,134 @@ def yamlLoader(fp):
         return yaml.safe_load(f)
 
 
+## -------------------------------------------------------------- ##
+def sanityCheck(data, verbose=True):
+    print("HEI: Doing sanity checks ... No issues?? ", end="") if verbose else None
+    any_nans = data.isna().any().any()  # Check for NaN values
+    any_empties = data.isin(["", " "]).any().any()  # Check for empty strings
+    result = not (any_nans or any_empties)
+    print(result) if verbose else None
+    return result
+
+
+def slicePalette(palette, min_val=0.2, max_val=1.0, n=256, reverse=False):
+    """
+    return a sliced (optionally reversed) colormap from a given palette;
+    `palette` can be a string (name of a colormap) or a list of colors.
+    """
+    if isinstance(palette, str):
+        cmap = mpl.colormaps[palette]
+    elif isinstance(palette, list):
+        cmap = ListedColormap(palette)
+    else:
+        raise ValueError("palette must be a string or a list of colors.")
+
+    colors = cmap(np.linspace(min_val, max_val, n))
+    return ListedColormap(colors[::-1] if reverse else colors)
+
+
+def selfRNDR(item, decimals=4, debug=False) -> Union[float, list, dict]:
+    """
+    Recursively rounds numbers to a specified number of decimal places. This function can handle floats, lists, dictionaries, and NumPy arrays. It ensures that numerical values are rounded to the specified number of decimal places while maintaining the structure of the input object.
+    Adapted from: https://stackoverflow.com/a/68876744/20437600.
+    """
+    decimals = max(0, decimals)
+    formatter = f"{{:.{decimals}f}}"
+    print(f"{type(item)}->{item}") if debug else None
+
+    if isinstance(item, Union[float, np.floating]):
+        return float(formatter.format(item))
+    elif isinstance(item, list):
+        return [selfRNDR(sub_item, decimals) for sub_item in item]
+    elif isinstance(item, dict):
+        return {key: selfRNDR(value, decimals) for key, value in item.items()}
+    elif isinstance(item, np.ndarray):
+        return selfRNDR(item.tolist(), decimals)
+    elif hasattr(item, "_dict"):  # [NOTE] wandb SummaryDict/SummarySubDict
+        return selfRNDR(dict(item), decimals)
+    else:
+        return item
+
+
+def getMemoryUsage(data):
+    print(f"{data.shape=} ... ", end="")
+    memory_usage = data.memory_usage(deep=False).sum() / (1024**3)
+    print(f"{memory_usage:.2f}GB")
+
+
+def primitiveDtypes(df: pd.DataFrame) -> dict:
+    """returns a mapping of column names to primitive python types as strings"""
+    mapping = {
+        "int64": "int",
+        "int32": "int",
+        "float64": "float",
+        "float32": "float",
+        "object": "str",
+        "bool": "bool",
+        "datetime64[ns]": "dtime",  # nanosecond precision; pandas default
+        "datetime64[us]": "dtime",  # microsecond precision
+        "datetime64[ms]": "dtime",  # millisecond precision
+        "geometry": "geom",
+    }
+    return {c: mapping.get(str(dtype), str(dtype)) for c, dtype in df.dtypes.items()}
+
+
+def printFeatureCardinality(data, ncols=3, linelength=105):
+    """prints the cardinality of each feature in a dataframe along with its primitive data type"""
+    getMemoryUsage(data)
+    deets = zip(data.columns, data.nunique(), primitiveDtypes(data).values())
+    ml_card = max(len(str(i)) for i in data.nunique())
+    ml_name = max(len(c) for c in data.columns)
+
+    # NOTE: line length - (max cardinality length + 3 for ' : ' ) * ncols - 3 spaces between columns
+    ml_left = (linelength - (ml_card + 3) * ncols - 3 * (ncols - 1)) // ncols
+    ml_left = min(ml_left, ml_name + 8)  # cap to longest (name + dtype) length
+
+    items = ""
+    for i, (c_name, c_card, p_type) in enumerate(deets):
+        if i % ncols == 0:
+            items += "\n"  # new line
+        else:
+            items += " " * 3  # column separator
+
+        left, right = f"[{p_type}] {c_name}", f"{c_card}"
+        items += f"{left[:ml_left]:<{ml_left}} : {right:<{ml_card}}"
+
+    print(items.strip())
+
+
+def peekNumerical(data: pd.DataFrame, plot: str = "histplot", n_cols: int = 4, yticks=True):
+    assert plot in ["boxplot", "histplot", "heatmap"], "A NEI: Invalid plot type specified!"
+    numeric_data = data.select_dtypes(include="number")
+
+    if plot == "heatmap":
+        plt.figure(figsize=(12, 10), dpi=300)
+        sns.heatmap(numeric_data.corr(), annot=True, fmt=".1f", cmap="coolwarm")
+        plt.title("Feature Correlation Heatmap")
+
+    else:
+        n_cols = min(n_cols, len(numeric_data.columns))
+        n_rows = int(np.ceil(len(numeric_data.columns) / n_cols))
+        plt.figure(figsize=(11, 2.5 * n_rows), dpi=300)
+
+        for i, c in enumerate(numeric_data.columns, 1):
+            plt.subplot(n_rows, n_cols, i)
+            c_data = numeric_data[c].dropna()
+            if plot == "boxplot":
+                sns.boxplot(x=c_data)
+            else:
+                sns.histplot(c_data, kde=True)  # type: ignore
+                if not yticks:
+                    plt.yticks([])  # turn off y-axis ticks
+            if i % n_cols != 1:
+                plt.ylabel("")  # turn off ylabels except for leftmost plots
+
+    plt.tight_layout(pad=0)
+    plt.subplots_adjust(hspace=0.25)
+    plt.show()
+
+
+## -------------------------------------------------------------- ##
 class aeSimilarity:
     """computes per-candidate weights from latent encodings, measuring similarity to existing stations"""
 
