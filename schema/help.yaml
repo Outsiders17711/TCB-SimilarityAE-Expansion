@@ -5,7 +5,7 @@ feature: |
   Feature representation for similarity computation. AE Encodings use learned latent representations from the hybrid denoising autoencoder; Raw Features use engineered spatial attributes directly.
 
 metric: |
-  Distance metric for measuring pairwise similarity between candidate and reference embeddings. Cosine measures directional alignment (requires l2 normalisation); Euclidean measures absolute distance in embedding space.
+  Distance metric for measuring pairwise similarity between candidate and reference embeddings. Cosine measures directional alignment (requires L2 normalisation); Euclidean measures absolute distance in embedding space.
 
 method: |
   Similarity aggregation method. Top-K computes mean of top-K similarities to existing stations; KDE performs kernel density estimation over all references.

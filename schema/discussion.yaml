@@ -1,3 +1,6 @@
+caption: |
+  Findings and methodology drawn from the accompanying paper: *Similarity-Based Bike Station Expansion via Hybrid Denoising Autoencoders*.
+
 framework: |
   #### Motivation
   Bike-sharing systems (BSS) have emerged as critical components of sustainable urban mobility, providing flexible options that complement public transit networks for first-mile/last-mile connectivity and short-distance trips. BSS operators face the challenge of strategically placing new stations to maximise accessibility and utilisation while maintaining operational efficiency. The location-allocation problem is particularly complex, as successful placement depends on intricate interactions between urban form, transport infrastructure, socio-demographic patterns, and user behaviour.

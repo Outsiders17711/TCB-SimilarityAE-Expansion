@@ -60,7 +60,7 @@ def chooseK():
 # ------------------ streamlit app ------------------ #
 def stPageConfig():
     st.set_page_config(
-        page_title="TCB SimilarityAE Expansion (TSAE) Webapp",
+        page_title="Similarity-Based Bike Station Expansion",
         layout="centered",
         initial_sidebar_state=360,  # "auto" behavior but start with the specified width
     )
@@ -103,10 +103,11 @@ DisplayStyle(static=False)
 
 def landing():
     """Display landing page with app description and parameter information"""
-    st.title("🚲 TSAE Similarity-Based BSS Expansion Dashboard")
+    st.title("🚲 Similarity-Based Bike Station Expansion")
     st.markdown("""
-    This dashboard enables interactive comparison of bike station allocation strategies 
-    across different parametrisations using autoencoder-based spatial modelling.
+    This dashboard supports interactive exploration of bike-sharing station expansion strategies,
+    comparing how learned autoencoder embeddings, similarity methods, and distance metrics
+    influence candidate site selection across different parametrisations.
     """)
 
     t_guide, t_framework = st.tabs(["**User Guide**", "**Framework Details**"])
@@ -126,8 +127,8 @@ def landing():
             st.markdown("#### ⚙️ Key Parameters")
             st.markdown("""
             - **Features**: HDAE encodings (learned representations) or raw spatial features
-            - **Metric**: Distance measure (cosine for l2-normalised, euclidean otherwise)
-            - **Method**: TopK (nearest neighbors) or KDE (kernel density)
+            - **Metric**: Distance measure (cosine for L2-normalised, euclidean otherwise)
+            - **Method**: TopK (nearest neighbours) or KDE (kernel density)
             - **TopK**: Number of nearest existing stations to consider
             - **nStations**: Target number of new stations to allocate
             """)
@@ -256,7 +257,7 @@ def selectParams(page: str):
 def showResults(page, params, p_excludes=[]):
     """helper to display results with consistent formatting"""
     result = st.session_state.results[page]
-    t_results, t_discussion = st.tabs(["**Results**", "**Discussion**"])
+    t_results, t_discussion = st.tabs(["**Results**", "**Discussion** ℹ️"])
 
     with t_results:
         if "k_values" in params:
@@ -285,6 +286,7 @@ def showResults(page, params, p_excludes=[]):
                 st.write(sorted(result[tag]))
 
     with t_discussion:
+        st.caption(st.session_state.discussions["caption"])
         discussion = st.session_state.discussions.get(page, "No discussion available for this page.")
         st.markdown(discussion)
 
