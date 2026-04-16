@@ -145,8 +145,8 @@ def main():
     # initialise session state for caching results
     if "results" not in st.session_state:
         st.session_state.results = {}
-        st.session_state.helps = yamlLoader(f"{root}/src/schema.help.yaml")
-        st.session_state.discussions = yamlLoader(f"{root}/src/schema.discussion.yaml")
+        st.session_state.helps = yamlLoader(f"{root}/schema/help.yaml")
+        st.session_state.discussions = yamlLoader(f"{root}/schema/discussion.yaml")
 
     # load data
     with st.spinner("Loading data and models..."):
