@@ -2,7 +2,6 @@ import heapq
 from contextlib import contextmanager
 
 import matplotlib as mpl
-import yaml
 from matplotlib.colors import ListedColormap
 from scipy.spatial.distance import cdist
 from shapely import wkt

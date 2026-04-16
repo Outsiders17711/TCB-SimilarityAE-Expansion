@@ -1,6 +1,6 @@
-from src.basics import *
+import streamlit as st
+from src import *
 from src.mappers import *
-from src.modules import *
 from src.plotters import *
 
 # ------------------ globals ------------------ #

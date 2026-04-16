@@ -15,9 +15,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import streamlit as st
 import yaml
-from streamlit_folium import st_folium
 from tqdm import tqdm
 
 logInfo = logging.info

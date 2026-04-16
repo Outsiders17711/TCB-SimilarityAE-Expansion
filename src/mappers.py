@@ -1,7 +1,6 @@
 import matplotlib.colors as mcolors
 
 from .basics import *
-from .modules import *
 from .plotters import cmap, loadGridData
 
 __all__ = [

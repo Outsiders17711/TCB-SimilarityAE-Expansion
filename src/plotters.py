@@ -1,7 +1,9 @@
 import io
 
+import streamlit as st
+
 from .basics import *
-from .modules import *
+from .modules import csv2gdf
 
 __all__ = [
     "loadGridData",
