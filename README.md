@@ -1,8 +1,11 @@
 # Similarity-Based Bike Station Expansion via Hybrid Denoising Autoencoders
 
-This repository accompanies the conference paper *Similarity-Based Bike Station Expansion via Hybrid Denoising Autoencoders*. It contains the packaged study data, the analysis notebooks, and a Streamlit webapp for exploring the station allocation framework.
+This repository accompanies the conference paper *Similarity-Based Bike Station Expansion via Hybrid Denoising Autoencoders*. It contains the packaged study data, the analysis notebooks, and a Streamlit web app for exploring the station allocation framework.
 
-The deployed webapp is available at [tsae-webapp.streamlit.app/](https://tsae-webapp.streamlit.app/).
+> arXiv Preprint &ndash; [[2604.15783] Similarity-Based Bike Station Expansion via Hybrid Denoising Autoencoders](https://arxiv.org/abs/2604.15783)
+> 
+> Web App &ndash; [Similarity-Based Bike Station Expansion · Streamlit](https://tsae-webapp.streamlit.app/)
+> 
 
 ## Overview
 
@@ -14,9 +17,9 @@ The central modelling step is a hybrid denoising autoencoder (HDAE) that compres
 
 The starting point is the packaged dataset in `data/tcbGridFeatures-TSAE29.gpkg` together with the prepackaged CSV exports in `data/`. The main files and directories are:
 
-- `data/` contains the packaged grid dataset and precomputed cosine and Euclidean encodings used by the webapp.
+- `data/` contains the packaged grid dataset and precomputed cosine and Euclidean encodings used by the web app.
 - `data.ipynb` carries out exploratory analysis of the engineered spatial feature set.
-- `model.ipynb` trains or reloads the HDAE, evaluates the learned embeddings, and exports the packaged artefacts used by the webapp.
+- `model.ipynb` trains or reloads the HDAE, evaluates the learned embeddings, and exports the packaged artefacts used by the web app.
 - `webapp.py` provides the interactive dashboard for exploring the station allocation framework across different parameter settings.
 
 Running the notebooks in order will also regenerate the prepackaged CSV artefacts under `data/` and produce visualisations under `imgs.bak/` and `models/`. The latter are not tracked in the repository but can be inspected locally.
@@ -31,9 +34,9 @@ uv sync --frozen
 
 This creates a virtual environment based on the `pyproject.toml` and `uv.lock` files.
 
-## Run The Webapp
+## Run The Web App
 
-The webapp reads the packaged artefacts in `data/` and supporting information in `schema/`. You do not need to retrain the autoencoder or re-run the notebooks before launching it.
+The web app reads the packaged artefacts in `data/` and supporting information in `schema/`. You do not need to retrain the autoencoder or re-run the notebooks before launching it.
 
 ```bash
 uv run streamlit run webapp.py
@@ -49,3 +52,19 @@ The dashboard exposes six analysis views that mirror the paper.
 - Consensus Selection
 
 These views let you inspect the effects of feature representation, similarity aggregation, distance metric, and consensus filtering on the selected station candidates.
+
+## Citation
+
+If you find this repository useful in your research, please cite as:
+
+```bibtex
+@misc{yusuf2026sbb,
+      title={Similarity-Based Bike Station Expansion via Hybrid Denoising Autoencoders}, 
+      author={Oluwaleke Yusuf and M. Tsaqif Wismadi and Adil Rasheed},
+      year={2026},
+      eprint={2604.15783},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2604.15783}, 
+}
+```
