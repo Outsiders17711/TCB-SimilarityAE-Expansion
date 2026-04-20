@@ -178,9 +178,10 @@ def main():
         datasets = prepareDatasets()
 
     # sidebar navigation
-    col1, col2 = st.sidebar.columns([0.8, 0.2])
-    home = col1.button("**🏠 TSAE Dashboard**", type="secondary", width="stretch")
-    reload = col2.button("🔄", help="Reload page and clear cache", type="secondary")
+    col1, col2 = st.sidebar.columns(2, gap="small")
+    kwargs = {"type": "secondary", "width": "stretch"}
+    home = col1.button("**🏠 Home**", **kwargs)  # type:ignore
+    reload = col2.button("🔄 Reload", help="Reload page and clear cache", **kwargs)  # type:ignore
 
     st.sidebar.markdown("### Select Analysis Mode")
     analysis = st.sidebar.radio(
