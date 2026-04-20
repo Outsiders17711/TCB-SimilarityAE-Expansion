@@ -20,7 +20,7 @@ The starting point is the packaged dataset in `data/tcbGridFeatures-TSAE29.gpkg`
 - `data/` contains the packaged grid dataset and precomputed cosine and Euclidean encodings used by the web app.
 - `data.ipynb` carries out exploratory analysis of the engineered spatial feature set.
 - `model.ipynb` trains or reloads the HDAE, evaluates the learned embeddings, and exports the packaged artefacts used by the web app.
-- `webapp.py` provides the interactive dashboard for exploring the station allocation framework across different parameter settings.
+- `webapp.py` provides the interactive web app for exploring the station allocation framework across different parameter settings.
 
 Running the notebooks in order will also regenerate the prepackaged CSV artefacts under `data/` and produce visualisations under `imgs.bak/` and `models/`. The latter are not tracked in the repository but can be inspected locally.
 
@@ -42,7 +42,7 @@ The web app reads the packaged artefacts in `data/` and supporting information i
 uv run streamlit run webapp.py
 ```
 
-The dashboard exposes six analysis views that mirror the paper.
+The web app exposes six analysis views that mirror the paper.
 
 - Single Configuration
 - Compare Features
@@ -55,7 +55,7 @@ These views let you inspect the effects of feature representation, similarity ag
 
 ## Citation
 
-If you find this repository useful in your research, please cite as:
+If you find this code useful for your research, please consider citing the paper:
 
 ```bibtex
 @misc{yusuf2026sbb,

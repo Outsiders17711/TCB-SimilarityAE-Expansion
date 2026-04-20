@@ -105,9 +105,11 @@ def landing():
     """Display landing page with app description and parameter information"""
     st.title("🚲 Similarity-Based Bike Station Expansion")
     st.markdown("""
-    This dashboard supports interactive exploration of bike-sharing station expansion strategies,
-    comparing how learned autoencoder embeddings, similarity methods, and distance metrics
-    influence candidate site selection across different parametrisations.
+        This web app is a companion to the conference paper *[Similarity-Based Bike Station
+        Expansion via Hybrid Denoising Autoencoders](https://arxiv.org/abs/2604.15783)*. 
+        It supports interactive exploration of bike-sharing station expansion strategies, 
+        comparing how learned autoencoder embeddings, similarity methods, and distance metrics 
+        influence candidate site selection across different parametrisations.
     """)
 
     t_guide, t_framework = st.tabs(["**User Guide**", "**Framework Details**"])
@@ -133,11 +135,33 @@ def landing():
             - **nStations**: Target number of new stations to allocate
             """)
 
+        st.info("👈 Select an analysis mode from the sidebar to begin")
+
     with t_framework:
         st.markdown(st.session_state.discussions["framework"])
 
     st.markdown("---")
-    st.info("👈 Select an analysis mode from the sidebar to begin")
+    st.markdown("#### Resources")
+    st.markdown(
+        """
+        GitHub Repository: [Outsiders17711/TCB-SimilarityAE-Expansion](https://github.com/Outsiders17711/TCB-SimilarityAE-Expansion)
+
+        arXiv Preprint: [[2604.15783] Similarity-Based Bike Station Expansion via Hybrid Denoising Autoencoders](https://arxiv.org/abs/2604.15783)
+
+        If you find this code useful for your research, please consider citing the paper:
+        ```bibtex
+        @misc{yusuf2026sbb,
+            title={Similarity-Based Bike Station Expansion via Hybrid Denoising Autoencoders}, 
+            author={Oluwaleke Yusuf and M. Tsaqif Wismadi and Adil Rasheed},
+            year={2026},
+            eprint={2604.15783},
+            archivePrefix={arXiv},
+            primaryClass={cs.LG},
+            url={https://arxiv.org/abs/2604.15783}, 
+        }
+        ```
+        """
+    )
 
 
 def main():
